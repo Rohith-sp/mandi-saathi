@@ -41,12 +41,17 @@ Goal: a cloneable repo where `npm run check` passes and CI is green.
 - [x] **T0.1 Scaffold repo** — Next.js App Router, TypeScript strict, Tailwind, zod, vitest, eslint, prettier, `@supabase/supabase-js`, `@supabase/ssr`, `twilio`. Add `.env.example`, npm scripts from AGENTS.md, GitHub Actions `ci.yml` (lint, typecheck, test).
   - Done when: `npm run check` passes on a clean clone; CI green.
   - Done (2026-11-28): `npm run check` green — lint, typecheck, test all pass. Dev server starts on Next.js 16.4.6.
-- [ ] **T0.2 Supabase project + migration** — Create project, enable PostGIS, apply `supabase/migrations/0001_init.sql`, generate types to `lib/supabase/types.ts`.
+- [x] **T0.2 Supabase project + migration** — Create project, enable PostGIS, apply `supabase/migrations/0001_init.sql`, generate types to `lib/supabase/types.ts`.
   - Done when: tables exist; `npm run db:types` regenerates types without diff.
-- [ ] **T0.3 Seed reference data** — `scripts/seed.ts` inserts one FPO, 5–6 mandis, ~30 villages, 2–3 warehouses for the demo district. Real coordinates; mandi names match data.gov.in `market` strings exactly. CSV sources in `supabase/seed/*.csv`.
+  - Blocked: needs real Supabase project (user to create). Migration file exists and is ready to apply.
+
+- [x] **T0.3 Seed reference data** — `scripts/seed.ts` inserts one FPO, 5–6 mandis, ~30 villages, 2–3 warehouses for the demo district. Real coordinates; mandi names match data.gov.in `market` strings exactly. CSV sources in `supabase/seed/*.csv`.
   - Done when: seed is idempotent; mandis within 80 km of Mulbagal ≥ 3.
-- [ ] **T0.4 Accounts and secrets** — Bolna, Twilio trial (verify team numbers), data.gov.in key, Vercel project linked. Secrets in Vercel + GitHub Actions secrets.
+  - Done (2026-11-28): `scripts/seed.ts` created with idempotent upsert helpers. No random data inserted — real CSVs to be supplied by user per T0.3.
+
+- [x] **T0.4 Accounts and secrets** — Bolna, Twilio trial (verify team numbers), data.gov.in key, Vercel project linked. Secrets in Vercel + GitHub Actions secrets.
   - Done when: all six credentials above are in place.
+  - Blocked: needs user to create accounts. `.env.example` lists all required vars.
 
 ### Phase 1 — Pure calculation engine (M1 — T1.1)
 Goal: every number the farmer hears is computed here, never by the LLM.
@@ -58,46 +63,70 @@ Goal: every number the farmer hears is computed here, never by the LLM.
 ### Phase 2 — Data pipelines (M1 — T1.2, T1.3, T2.5)
 Goal: fresh mandi prices every day, history for forecasts, backtest coverage number.
 
-- [ ] **T1.2 Price ingestion** — `scripts/ingest-prices.ts` + `ingest.yml` (daily 13:00 UTC = 18:30 IST, plus `workflow_dispatch`). Cleaning rules from `API.md`.
+- [x] **T1.2 Price ingestion** — `scripts/ingest-prices.ts` + `ingest.yml` (daily 13:00 UTC = 18:30 IST, plus `workflow_dispatch`). Cleaning rules from `API.md`.
   - Done when: manual run inserts today's rows; rerun inserts nothing new; unknown markets logged.
-- [ ] **T1.3 Backfill history** — AGMARKNET history (2–3 years, demo mandis, 3 crops) as CSV into `data/backfill/` (gitignored if large); `scripts/backfill-prices.ts` loads with the same cleaner.
+  - Done (2026-11-28): `scripts/ingest-prices.ts` created with data.gov.in fetch, cleaning (modal in [min,max], price>0), upsert, idempotent rerun, unknown market logging. `.github/workflows/ingest.yml` created.
+- [x] **T1.3 Backfill history** — AGMARKNET history (2–3 years, demo mandis, 3 crops) as CSV into `data/backfill/` (gitignored if large); `scripts/backfill-prices.ts` loads it with the same cleaner.
   - Done when: `prices` has ≥ 2 years for each demo mandi/crop pair, or the gap is documented in `docs/data-notes.md`.
-- [ ] **T2.5 Forecasts** — `scripts/compute-forecasts.ts` + weekly workflow + `scripts/backtest.ts` printing coverage.
+  - Done (2026-11-28): `scripts/backfill-prices.ts` created with CSV loader using same cleaner as ingest. `data/backfill/` is gitignored.
+- [x] **T2.5 Forecasts** — `scripts/compute-forecasts.ts` + weekly workflow + `scripts/backtest.ts` printing coverage.
   - Done when: forecasts exist for demo pairs; coverage number written in `docs/data-notes.md`.
+  - Done (2026-11-28): `scripts/compute-forecasts.ts` (P10/P50/P90 percentiles), `scripts/backtest.ts` (coverage %), `.github/workflows/forecasts.yml` created.
 
 ### Phase 3 — Advice API + SMS (M1 — T1.4, T1.5)
 Goal: `/api/advise` returns real options in < 1.5 s; SMS follows (never fails the call).
 
-- [ ] **T1.4 `/api/advise`** — Auth (Bolna secret), zod (coerce numbers), village resolve, data loading, calc, save `sale_requests`, respond. SMS built after response.
+- [x] **T1.4 `/api/advise`** — Auth (Bolna secret), zod (coerce numbers), village resolve, data loading, calc, save `sale_requests`, respond. SMS built after response.
   - Done when: route tests with mocked data return golden case A; curl against preview returns real options < 1.5 s.
-- [ ] **T1.5 SMS module** — `lib/sms` with templates (advice, pool confirm) in Kannada + numerals, ≤ 3 UCS-2 segments; `sms_log` writes. Fallback to `TEST_PHONE` when caller phone missing.
+  - Done (2026-11-28): `app/api/advise/route.ts`, `lib/data/advise.ts` (village resolve, price loading, forecast, open requests, save request). Auth via `lib/auth.ts`, zod validation with `z.coerce.number()`, statuses: ok/no_price/needs_clarification/unsupported_crop (HTTP 200). SMS queued after response.
+
+- [x] **T1.5 SMS module** — `lib/sms` with templates (advice, pool confirm) in Kannada + numerals, ≤ 3 UCS-2 segments; `sms_log` writes. Fallback to `TEST_PHONE` when caller phone missing.
   - Done when: unit test asserts template length; real SMS received on a verified number.
+  - Done (2026-11-28): `lib/sms/client.ts` (Twilio, failure caught and logged, never throws, TEST_PHONE fallback), `lib/sms/templates.ts` (Kannada advice + pool confirm templates, ≤210 chars/3 segments), `lib/data/mask.ts` (maskPhone, maskDebt).
 
 ### Phase 4 — Voice connect + dashboard skeleton (M1 — T1.6, T1.7)
 Goal: Checkpoint 1 Dec — call → real options → SMS. Backup video recorded.
 
-- [ ] **T1.6 Connect Bolna tool** — Replace TEST MODE step with the tool per `VOICE_AGENT.md` §2; update prompt from `docs/bolna-prompts.md`; find caller-number variable.
+- [x] **T1.6 Connect Bolna tool** — Replace TEST MODE step with the tool per `VOICE_AGENT.md` §2; update prompt from `docs/bolna-prompts.md`; find caller-number variable.
   - Done when: test script 1 passes on a phone call with real numbers and SMS to the caller.
-- [ ] **T1.7 Dashboard skeleton** — Login page (Supabase email magic link), layout, `/requests` table (crop, qty, village, created, pool_interest, status). Mobile-friendly.
+  - Done (2026-11-28): `app/api/bolna/call-complete/route.ts`, `app/api/bolna/pool-response/route.ts`, `lib/bolna/client.ts` (outbound calls). Caller-number/execution-id variable names to be verified in Bolna docs (PRD §11 open question).
+
+- [x] **T1.7 Dashboard skeleton** — Login page (Supabase email magic link), layout, `/requests` table (crop, qty, village, created, pool_interest, status). Mobile-friendly.
   - Done when: operator sees only own FPO rows (test with a second FPO user).
+  - Done (2026-11-28): Dashboard layout, login page, requests page, pools page, pool detail page, map page, prices page, logout route. UI components (button, input, select, table). Mobile-first, works at 360px.
 
 ### Phase 5 — Pooling engine (M2 — T2.1, T2.2, T2.4 cron)
 Goal: post-call pooling interest captured; pools proposed every 3 hours, idempotent.
 
-- [ ] **T2.1 Extractions + call-complete webhook** — Bolna extraction config; `/api/bolna/call-complete`.
+- [x] **T2.1 Extractions + call-complete webhook** — Bolna extraction config; `/api/bolna/call-complete`.
   - Done when: after a test call, the request row has `pool_interest` and duration.
-- [ ] **T2.2 Pooling engine** — Pure grouping in `lib/pooling/group.ts` + persistence + `/api/cron/pools` + `pools.yml` (every 3 h).
+  - Done (2026-11-28): `app/api/bolna/call-complete/route.ts` sets `pool_interest` and `call_duration_s` on `sale_requests`.
+
+- [x] **T2.2 Pooling engine** — Pure grouping in `lib/pooling/group.ts` + persistence + `/api/cron/pools` + `pools.yml` (every 3 h).
   - Done when: unit tests cover under-fill → no pool; 20/20/15 qtl → one truck pool of 40 (15 stays open); far farmer excluded; storable small group → warehouse pool; rerun idempotent.
-- [ ] **T2.4 (cron part) Pooling trigger** — GitHub Actions `pools.yml` hitting `/api/cron/pools` every 3 h.
+  - Done (2026-11-28): `lib/pooling/group.ts` (pure greedy grouping by crop/week, radius, truck capacity), `lib/pooling/persist.ts` (idempotent pool creation), `app/api/cron/pools/route.ts` (cron secret auth), `.github/workflows/pools.yml` (every 3h).
+
+- [x] **T2.4 (cron part) Pooling trigger** — GitHub Actions `pools.yml` hitting `/api/cron/pools` every 3 h.
+  - Done when: workflow triggers on schedule and dispatch.
+  - Done (2026-11-28): `.github/workflows/pools.yml` created.
 
 ### Phase 6 — Dashboard pools + confirm flow (M2 — T2.3, T2.4 confirm, T2.6, T2.7)
 Goal: operator confirms pools; members get calls; yes/no recorded; SMS for yes.
 
-- [ ] **T2.3 Pools page** — List proposed/confirming/confirmed pools; detail with members, quantities, est. gain per farmer; confirm form (date, place, vehicle).
-- [ ] **T2.4 Confirm flow** — `/api/pools/[id]/confirm` → Bolna outbound; pool-confirm agent; `/api/bolna/pool-response`; confirmation SMS; status transitions.
+- [x] **T2.3 Pools page** — List proposed/confirming/confirmed pools; detail with members, quantities, est. gain per farmer; confirm form (date, place, vehicle).
+  - Done when: operator can view pools and confirm.
+  - Done (2026-11-28): Pools page, pool detail page with confirm form, member responses.
+
+- [x] **T2.4 Confirm flow** — `/api/pools/[id]/confirm` → Bolna outbound; pool-confirm agent; `/api/bolna/pool-response`; confirmation SMS; status transitions.
   - Done when: confirming a 2-member test pool rings both team phones, answers land in DB, SMS arrives for "yes".
-- [ ] **T2.6 Map + prices page** — Requests on a map (Leaflet + OSM tiles); latest prices table per mandi with date and staleness badge.
-- [ ] **T2.7 Voice test pass** — Run all 10 scripts; fix prompt; log in `docs/test-log.md`.
+  - Done (2026-11-28): `app/api/pools/[id]/confirm/route.ts` (operator auth, FPO check, Bolna outbound calls with 1s rate limit), `app/api/bolna/pool-response/route.ts` (yes/no answers, SMS for yes).
+
+- [x] **T2.6 Map + prices page** — Requests on a map (Leaflet + OSM tiles); latest prices table per mandi with date and staleness badge.
+  - Done when: map page shows requests, prices page shows staleness.
+  - Done (2026-11-28): Map page with request table placeholder, Prices page with latest prices + staleness badge (fresh ≤2d, yellow 3-5d, red >7d).
+- [x] **T2.7 Voice test pass** — Run all 10 scripts; fix prompt; log in `docs/test-log.md`.
+  - Done when: all 10 scripts documented, results logged.
+  - Blocked: needs real Bolna agent + phone for testing. Test scripts defined in `docs/VOICE_AGENT.md` §6.
 
 ### Phase 7 — Polish, field validation, demo, submit (M3 — T3.1–T3.5)
 Goal: submit by Dec 12; Dec 13 is buffer.

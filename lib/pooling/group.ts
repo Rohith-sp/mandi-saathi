@@ -104,11 +104,10 @@ export function groupPools(inputs: GroupingInputs): {
 
       let totalQtls = seed.quantityQtls
       const memberIds: string[] = [seed.id]
-      assigned.add(seed.id)
 
       // Walk remaining unassigned within radius, nearest first
       const candidates = sorted
-        .filter((r) => !assigned.has(r.id))
+        .filter((r) => !assigned.has(r.id) && r.id !== seed.id)
         .map((r) => ({
           ...r,
           distKm: haversineKm(seed.lat, seed.lng, r.lat, r.lng),
@@ -120,7 +119,6 @@ export function groupPools(inputs: GroupingInputs): {
         if (totalQtls + cand.quantityQtls <= CALC_CONFIG.TRUCK_CAPACITY_QTL) {
           totalQtls += cand.quantityQtls
           memberIds.push(cand.id)
-          assigned.add(cand.id)
         }
       }
 
@@ -139,6 +137,8 @@ export function groupPools(inputs: GroupingInputs): {
           targetMandiId: targetMandi?.id,
           estimatedGainPerFarmer: totalQtls > 0 ? 500 : undefined, // placeholder; replaced by caller
         })
+        // Only mark assigned when a pool is created
+        for (const id of memberIds) assigned.add(id)
       } else if (storable && localPrice > 0 && totalQtls * localPrice * CALC_CONFIG.LOAN_LTV >= CALC_CONFIG.LOAN_MIN) {
         // Warehouse pool
         const targetWarehouse = selectWarehouseTarget(warehouses, seed.lat, seed.lng)
@@ -148,6 +148,8 @@ export function groupPools(inputs: GroupingInputs): {
           totalQtls,
           targetWarehouseId: targetWarehouse?.id,
         })
+        // Only mark assigned when a pool is created
+        for (const id of memberIds) assigned.add(id)
       }
       // else: no pool, members remain unassigned (open)
     }
