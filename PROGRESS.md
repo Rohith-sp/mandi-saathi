@@ -147,6 +147,21 @@ Goal: submit by Dec 12; Dec 13 is buffer.
 
 ---
 
+## Code review findings (resolved)
+
+Automated reviewer against AGENTS.md + `.abide/rubric.json`. `npm run check` green (47 tests).
+- **C1:** added `supabase/migrations/0002_mandi_prices_near.sql` (PostGIS `st_distance`, straight-line×1.3, `p_max_km`/`p_stale_days`, Asia/Kolkata `price_age_days`); removed silent broken `catch{}` fallback in `loadMandiPrices`; no invented data; spatial via `supabase.rpc`.
+- **C2:** no `lat ?? 0`/`lng ?? 0`; returns `needs_clarification` `village_location`.
+- **C3:** `createServerClient` uses `@supabase/ssr` + cookies; dashboard + confirm + logout use RLS user session; `createServiceClient` (service role) reserved for admin/advise; confirm re-checks operator FPO.
+- **I1:** real `price_date`; `sms_queued` reflects actual result.
+- **I2:** Asia/Kolkata for `saleWeek`, ISO week, `price_age_days`; `lib/calc/time.ts`; no `Date.now` in `lib/calc`.
+- **I3:** `as any` removed; no hand-edit `lib/supabase/types.ts`.
+- **I4:** `sendSms` only when `caller_phone` present.
+- **I5:** `poolAvailable` requires pooled `store_loan`.
+- **I6:** no magic numbers; `MAX_QUANTITY_QTLS`, `MS_PER_DAY`; `storeLoan` `storageLossPctPerMonth` input (no hardcoded ragi/0.005).
+- **I7:** `route.ts` slim parse→authorize→call→return; `lib/advise/build-advice.ts`.
+- Fixed `storeLoan` hardcoded crop bug; `pool-response` route correctness + status transitions; `server-only` on `lib/data`; no fake phone; `server-only` vitest alias.
+
 ## Decisions & open questions (log here as we resolve)
 
 - Bolna caller-number + execution-id variable names — verify in Bolna docs before T1.6 (PRD §11 #3)
