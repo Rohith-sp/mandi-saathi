@@ -1,0 +1,456 @@
+{
+  "version": 1,
+  "compiledAt": "2026-11-28T00:00:00.000Z",
+  "compiledBy": "claude",
+  "sources": [
+    { "path": "AGENTS.md", "scope": "**/*" }
+  ],
+  "rules": [
+    {
+      "id": "calc-pure",
+      "text": "lib/calc is pure. No I/O, no Supabase, no fetch, no Date.now() (pass today in). Same inputs → same outputs.",
+      "source": { "path": "AGENTS.md", "line": 23 },
+      "scope": ["lib/calc/**/*.ts"],
+      "check": {
+        "type": "lint",
+        "how": "no-restricted-syntax: fetch, process.env, Date.now, require, import of @supabase/*",
+        "pattern": "\\b(fetch|process\\.env|Date\\.now)\\b|from ['\\\"]@supabase|require\\s*\\("
+      }
+    },
+    {
+      "id": "calc-config-single-place",
+      "text": "Config lives in one place: lib/calc/config.ts. No magic numbers in routes or components.",
+      "source": { "path": "AGENTS.md", "line": 24 },
+      "scope": ["app/**/*.ts", "app/**/*.tsx", "lib/calc/**/*.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change add a hardcoded numeric constant (a magic number) outside lib/calc/config.ts, such as commission rates, truck costs, prices, distances, or thresholds?",
+          "criteria": {
+            "true": "commission = 0.02 written inline in a route; TRUCK_BASE_COST = 1000 hardcoded in options.ts",
+            "false": "reading COMMISSION_PCT or TRUCK_BASE_COST from lib/calc/config.ts"
+          }
+        }
+      }
+    },
+    {
+      "id": "llm-no-numbers",
+      "text": "The LLM never computes numbers. Every amount the farmer hears comes from /api/advise output.",
+      "source": { "path": "AGENTS.md", "line": 22 },
+      "scope": ["app/**/*.ts", "app/**/*.tsx", "lib/bolna/**/*.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change add LLM-side arithmetic or spoken amounts that are not derived from /api/advise output (say_amount or net_range values)?",
+          "criteria": {
+            "true": "computing net = price * qty * (1 - commission) in a prompt or Bolna tool handler",
+            "false": "reading say_amount from the tool response and speaking it"
+          }
+        }
+      }
+    },
+    {
+      "id": "units-named",
+      "text": "Name variables with units when ambiguous (priceRsPerQtl, distanceKm).",
+      "source": { "path": "AGENTS.md", "line": 25 },
+      "scope": ["lib/calc/**/*.ts", "app/api/**/*.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change introduce an ambiguous numeric variable without a unit suffix (e.g. bare `price`, `distance`, `cost`) instead of a unit-named one (e.g. `priceRsPerQtl`, `distanceKm`)?",
+          "criteria": {
+            "true": "const price = 2000; const d = 55;",
+            "false": "const priceRsPerQtl = 2000; const distanceKm = 55;"
+          }
+        }
+      }
+    },
+    {
+      "id": "no-raw-error-to-user",
+      "text": "Errors: return { error: \"<snake_code>\" } with the right status. Never leak raw exceptions.",
+      "source": { "path": "AGENTS.md", "line": 31 },
+      "scope": ["app/api/**/*.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change expose raw exception text (error.message, String(error), stack) to a user instead of a snake_code error string?",
+          "criteria": {
+            "true": "res.json({ error: String(err) }); res.json({ message: err.message })",
+            "false": "return Response.json({ error: 'invalid_quantity' }, { status: 400 })"
+          }
+        }
+      }
+    },
+    {
+      "id": "zod-validation",
+      "text": "Validate all request bodies with zod. Coerce numbers (Bolna sends strings).",
+      "source": { "path": "AGENTS.md", "line": 30 },
+      "scope": ["app/api/**/*.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change read a request body without zod validation, or parse quantity/debt without z.coerce.number()?",
+          "criteria": {
+            "true": "const { quantity } = await req.json(); Number(body.quantity_quintals)",
+            "false": "z.object({ quantity_quintals: z.coerce.number() }).parse(body)"
+          }
+        }
+      }
+    },
+    {
+      "id": "bolna-secret-check",
+      "text": "Every Bolna-facing route checks the secret with lib/auth.ts (constant-time compare).",
+      "source": { "path": "AGENTS.md", "line": 28 },
+      "scope": ["app/api/bolna/**/*.ts", "app/api/advise/route.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change add or modify a Bolna-facing route that does not check x-api-secret via lib/auth.ts constant-time compare?",
+          "criteria": {
+            "true": "a POST /api/advise handler that reads the body without checking the secret header",
+            "false": "calling auth.checkBolnaSecret(request) at the top of the route"
+          }
+        }
+      }
+    },
+    {
+      "id": "cron-secret-check",
+      "text": "Every cron route checks CRON_SECRET.",
+      "source": { "path": "AGENTS.md", "line": 28 },
+      "scope": ["app/api/cron/**/*.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change add or modify a cron route that does not check Authorization: Bearer $CRON_SECRET?",
+          "criteria": {
+            "true": "POST /api/cron/pools without any secret header check",
+            "false": "checking the authorization header against process.env.CRON_SECRET"
+          }
+        }
+      }
+    },
+    {
+      "id": "service-role-server-only",
+      "text": "SUPABASE_SERVICE_ROLE_KEY only in server code. Files under lib/data start with import server-only.",
+      "source": { "path": "AGENTS.md", "line": 29 },
+      "scope": ["lib/data/**/*.ts"],
+      "check": {
+        "type": "lint",
+        "pattern": "^import\\s+[\"']server-only[\"'];",
+        "how": "every file under lib/data begins with import \"server-only\""
+      }
+    },
+    {
+      "id": "no-client-secrets",
+      "text": "No secrets in client bundles.",
+      "source": { "path": "AGENTS.md", "line": 28 },
+      "scope": ["app/**/*.tsx", "app/**/*.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change reference a secret env var (BOLNA_API_KEY, SUPABASE_SERVICE_ROLE_KEY, TWILIO_TOKEN, CRON_SECRET, DATA_GOV_API_KEY) in a client component or client-side code?",
+          "criteria": {
+            "true": "process.env.BOLNA_API_KEY inside a 'use client' component",
+            "false": "using NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY only"
+          }
+        }
+      }
+    },
+    {
+      "id": "no-orm-ui-kit",
+      "text": "Do not add an ORM, state library, or UI kit beyond Tailwind without a written reason in the PR.",
+      "source": { "path": "AGENTS.md", "line": 38 },
+      "scope": ["package.json", "app/**/*.ts", "app/**/*.tsx", "lib/**/*.ts"],
+      "when": "turn",
+      "check": {
+        "type": "model",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change add a new dependency that is an ORM, state library, or UI kit (beyond Tailwind), without a written justification?"
+        }
+      }
+    },
+    {
+      "id": "no-ml-backend",
+      "text": "Do not add ML models or LLM calls to the backend for the prototype.",
+      "source": { "path": "AGENTS.md", "line": 38 },
+      "scope": ["app/api/**/*.ts", "lib/**/*.ts", "scripts/**/*.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change add an ML model, an LLM call, or an external AI API call to backend code (routes, lib, scripts)?",
+          "criteria": {
+            "true": "calling openai, anthropic, or a local model in /api/advise",
+            "false": "reading from Supabase and computing in lib/calc"
+          }
+        }
+      }
+    },
+    {
+      "id": "no-farmer-app",
+      "text": "Do not build a farmer-facing app or text input channel.",
+      "source": { "path": "AGENTS.md", "line": 38 },
+      "scope": ["app/**/*"],
+      "when": "turn",
+      "check": {
+        "type": "model",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change add a farmer-facing app UI or a text input channel for farmers (input beyond voice via Bolna)?"
+        }
+      }
+    },
+    {
+      "id": "no-invented-data",
+      "text": "Do not invent mandi names, coordinates, prices or cost constants. If data is missing, leave a TODO and say so.",
+      "source": { "path": "AGENTS.md", "line": 39 },
+      "scope": ["supabase/seed/**/*", "scripts/**/*.ts", "lib/calc/config.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change invent mandi names, coordinates, prices, or cost constants without a TODO or source note, instead of using real data or a placeholder?"
+          }
+        }
+      }
+    },
+    {
+      "id": "no-hand-edit-migrations",
+      "text": "Do not edit applied migrations; add a new numbered migration.",
+      "source": { "path": "AGENTS.md", "line": 40 },
+      "scope": ["supabase/migrations/**/*.sql"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change modify an already-applied migration file instead of adding a new numbered migration?"
+          }
+        }
+      }
+    },
+    {
+      "id": "no-hand-edit-types",
+      "text": "Do not hand-edit lib/supabase/types.ts.",
+      "source": { "path": "AGENTS.md", "line": 40 },
+      "scope": ["lib/supabase/types.ts"],
+      "check": {
+        "type": "lint",
+        "pattern": "",
+        "how": "lib/supabase/types.ts is generated by npm run db:types and must not be hand-edited"
+      }
+    },
+    {
+      "id": "tests-next-to-domain",
+      "text": "Tests next to the domain in tests/, named <area>.test.ts.",
+      "source": { "path": "AGENTS.md", "line": 34 },
+      "scope": ["tests/**/*.ts"],
+      "check": {
+        "type": "model",
+        "when": "turn",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change place a test outside tests/ or name it without the <area>.test.ts convention?"
+          }
+        }
+      }
+    },
+    {
+      "id": "golden-tests-must-pass",
+      "text": "Golden tests must pass. If you change a formula, update CALC_SPEC in the same change and explain the new numbers.",
+      "source": { "path": "AGENTS.md", "line": 26 },
+      "scope": ["lib/calc/**/*.ts", "tests/calc.test.ts", "docs/CALC_SPEC.md"],
+      "when": "turn",
+      "check": {
+        "type": "model",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change modify a calc formula without also updating docs/CALC_SPEC.md and the golden test expectations?"
+          }
+        }
+      }
+    },
+    {
+      "id": "no-recommendation",
+      "text": "No recommendation. Responses rank options; they never say which one to choose.",
+      "source": { "path": "AGENTS.md", "line": 27 },
+      "scope": ["app/api/advise/route.ts", "lib/calc/rank.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change add language that recommends or chooses an option for the farmer instead of ranking and presenting options neutrally?"
+          }
+        }
+      }
+    },
+    {
+      "id": "uncertainty-present",
+      "text": "Uncertainty is always present. Every option has a confidence; future prices are ranges.",
+      "source": { "path": "AGENTS.md", "line": 27 },
+      "scope": ["lib/calc/confidence.ts", "lib/calc/options.ts", "app/api/advise/route.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change return an option without a confidence label, or a future price without a P10/P50/P90 range?"
+          }
+        }
+      }
+    },
+    {
+      "id": "advise-reads-own-db",
+      "text": "Live calls read only our DB. No data.gov.in or Open-Meteo calls inside /api/advise.",
+      "source": { "path": "AGENTS.md", "line": 28 },
+      "scope": ["app/api/advise/route.ts", "lib/data/**/*.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change add an external HTTP call (data.gov.in, Open-Meteo, or similar) inside the /api/advise request path?"
+          }
+        }
+      }
+    },
+    {
+      "id": "sms-failure-never-fails",
+      "text": "SMS failure never fails a request. Log to sms_log and continue.",
+      "source": { "path": "AGENTS.md", "line": 30 },
+      "scope": ["app/api/advise/route.ts", "lib/sms/**/*.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change let an SMS throwing error propagate and fail the /api/advise request instead of being caught and logged to sms_log?"
+          }
+        }
+      }
+    },
+    {
+      "id": "mask-phone",
+      "text": "Never log full phone numbers, debt amounts, or call transcripts. Use maskPhone().",
+      "source": { "path": "AGENTS.md", "line": 31 },
+      "scope": ["lib/**/*.ts", "app/api/**/*.ts", "scripts/**/*.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change log a full phone number, debt amount, or call transcript instead of using maskPhone()?"
+          }
+        }
+      }
+    },
+    {
+      "id": "server-components-default",
+      "text": "Server components by default; use client only where interaction needs it.",
+      "source": { "path": "AGENTS.md", "line": 33 },
+      "scope": ["app/**/*.tsx"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change add \"use client\" to a component that does not need interactivity?"
+          }
+        }
+      }
+    },
+    {
+      "id": "route-handler-shape",
+      "text": "Route handlers: parse → authorize → call a function in lib/ → return. Keep business logic out of route.ts.",
+      "source": { "path": "AGENTS.md", "line": 33 },
+      "scope": ["app/api/**/route.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change put business logic (calculation, ranking, DB queries) directly in a route.ts handler instead of calling a function in lib/?"
+          }
+        }
+      }
+    },
+    {
+      "id": "spatial-via-rpc",
+      "text": "Spatial queries via SQL functions (supabase.rpc) rather than string-built SQL.",
+      "source": { "path": "AGENTS.md", "line": 34 },
+      "scope": ["lib/data/**/*.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change build spatial SQL as a string instead of using supabase.rpc with a SQL function?"
+          }
+        }
+      }
+    },
+    {
+      "id": "status-200-for-agent-statuses",
+      "text": "Statuses the agent must speak (no_price, needs_clarification, unsupported_crop) are HTTP 200 with a status field.",
+      "source": { "path": "AGENTS.md", "line": 31 },
+      "scope": ["app/api/advise/route.ts"],
+      "check": {
+        "type": "model",
+        "when": "edit",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change return a non-200 status for agent-speakable statuses (no_price, needs_clarification, unsupported_crop)?"
+          }
+        }
+      }
+    },
+    {
+      "id": "no-env-commit",
+      "text": "Never commit .env* files other than .env.example.",
+      "source": { "path": "AGENTS.md", "line": 32 },
+      "scope": [".env*", "!.env.example"],
+      "when": "turn",
+      "check": {
+        "type": "model",
+        "question": {
+          "type": "boolean",
+          "instructions": "Does this change commit any .env file other than .env.example?"
+        }
+      }
+    },
+    {
+      "id": "run-check-before-commit",
+      "text": "npm run check (lint + typecheck + test) before every commit.",
+      "source": { "path": "AGENTS.md", "line": 42 },
+      "scope": ["**/*"],
+      "check": { "type": "unenforceable", "reason": "about the process, not the code" }
+    },
+    {
+      "id": "ask-when-unsure",
+      "text": "Prefer the smallest change that satisfies the task's Done when. If a requirement conflicts with these docs, stop and ask rather than guessing.",
+      "source": { "path": "AGENTS.md", "line": 41 },
+      "scope": ["**/*"],
+      "check": { "type": "unenforceable", "reason": "about the conversation, not the code" }
+    }
+  ]
+}

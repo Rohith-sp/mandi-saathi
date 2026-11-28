@@ -1,0 +1,26 @@
+name: Daily Price Ingestion
+
+on:
+  schedule:
+    # Daily 13:00 UTC = 18:30 IST
+    - cron: "0 13 * * *"
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run ingest
+        env:
+          DATA_GOV_API_KEY: ${{ secrets.DATA_GOV_API_KEY }}
+          DATA_GOV_RESOURCE_ID: ${{ secrets.DATA_GOV_RESOURCE_ID }}
+          INGEST_STATE: ${{ secrets.INGEST_STATE }}
+          INGEST_DISTRICTS: ${{ secrets.INGEST_DISTRICTS }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

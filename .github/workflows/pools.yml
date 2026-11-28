@@ -1,0 +1,19 @@
+name: Pooling Job (every 3 hours)
+
+on:
+  schedule:
+    - cron: "0 */3 * * *"
+  workflow_dispatch:
+
+jobs:
+  pools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run pooling job
+        run: |
+          curl -s -X POST "${{ secrets.APP_URL }}/api/cron/pools" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ secrets.APP_URL }}
