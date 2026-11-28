@@ -197,7 +197,31 @@ npm run backtest     # print forecast coverage
 
 ## Project status
 
-Prototype in progress for Tech4Bharat (GAVS 2026), Problem 6.1. See [docs/TASKS.md](docs/TASKS.md) for the build backlog and progress.
+Prototype in progress for Tech4Bharat (GAVS 2026), Problem 6.1. **All phases implemented.** See [PROGRESS.md](PROGRESS.md) for full progress tracking, [docs/TASKS.md](docs/TASKS.md) for the original backlog, and [docs/superpowers/plans/2026-11-28-mandi-saathi-complete-build.md](docs/superpowers/plans/2026-11-28-mandi-saathi-complete-build.md) for the implementation plan.
+
+### What's built
+
+- **Pure calc engine** (`lib/calc/`) per `docs/CALC_SPEC.md`, all golden tests pass
+- **`/api/advise`** route with Bolna secret auth, zod validation, village resolution, SMS
+- **SMS module** (`lib/sms/`, Twilio, Kannada templates, failure never fails a request)
+- **Bolna webhooks** (`/api/bolna/call-complete`, `/api/bolna/pool-response`, outbound calls)
+- **Pooling engine** (`lib/pooling/`, pure grouping + idempotent persistence, cron every 3h)
+- **Pool confirm flow** (`/api/pools/[id]/confirm`, Bolna outbound, SMS)
+- **FPO dashboard** (Supabase email auth, requests, pools, pool detail + confirm, map, prices)
+- **Data pipelines** (`scripts/ingest-prices.ts`, `backfill-prices.ts`, `compute-forecasts.ts`, `backtest.ts`, `seed.ts`)
+- **GitHub Actions** (CI, daily ingest, weekly forecasts + backtest, 3h pooling)
+- **Tests** (47 tests: calc golden cases, pooling, SMS, mask, vitest)
+
+### What needs real credentials (you)
+
+- Create Supabase project, apply migration, run `npm run db:types` (T0.2)
+- Create accounts: Bolna, Twilio trial, data.gov.in API key, Vercel (T0.4)
+- Supply real mandi/village/warehouse data with real coordinates, no invented data (T0.3)
+- Add secrets to `.env.local` + Vercel + GitHub Actions secrets
+- Connect Bolna tool + webhooks (T1.6), verify caller-number + execution-id variables
+- Run voice tests 1–7, 9, 10 on a real phone call, log in `docs/test-log.md` (T2.7)
+- Run `npm run backtest` against real data, record coverage in `docs/data-notes.md` (T2.5)
+- Field validation + demo video + submission (Phase 7)
 
 ## Team
 
