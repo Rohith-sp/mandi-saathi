@@ -1,8 +1,8 @@
 -- Mandi Saathi initial schema
 -- Apply with: supabase db push   (or the Supabase SQL editor)
 
-create extension if not exists postgis;
-create extension if not exists pgcrypto;
+create extension if not exists postgis with schema extensions;
+create extension if not exists pgcrypto with schema extensions;
 
 -- ---------- reference data ----------
 create table crops (
@@ -38,7 +38,7 @@ create table villages (
   name_kn text,
   taluk text,
   district text not null,
-  location geography(point, 4326) not null,
+  location extensions.geography(point, 4326) not null,
   fpo_id uuid references fpos(id)
 );
 create index villages_name_idx on villages (lower(name));
@@ -48,7 +48,7 @@ create table mandis (
   id uuid primary key default gen_random_uuid(),
   name text not null,                           -- must match data.gov.in "market"
   district text not null,
-  location geography(point, 4326) not null,
+  location extensions.geography(point, 4326) not null,
   commission_pct numeric                        -- null -> config default
 );
 create unique index mandis_name_district on mandis (name, district);
@@ -57,7 +57,7 @@ create index mandis_loc_idx on mandis using gist (location);
 create table warehouses (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  location geography(point, 4326) not null,
+  location extensions.geography(point, 4326) not null,
   wdra_registered boolean not null default false,
   charge_per_qtl_month numeric,
   capacity_qtl numeric
@@ -104,7 +104,7 @@ create table sale_requests (
   crop_id text not null references crops(id),
   quantity_qtl numeric not null check (quantity_qtl > 0),
   debt_rupees integer not null default 0,
-  location geography(point, 4326) not null,
+  location extensions.geography(point, 4326) not null,
   sale_week date not null,                      -- Monday of the target week (IST)
   options jsonb not null,                       -- full /api/advise output
   pool_interest boolean,                        -- from post-call extraction
@@ -158,13 +158,17 @@ alter table pools enable row level security;
 alter table pool_members enable row level security;
 alter table sms_log enable row level security;
 
-create function current_fpo() returns uuid language sql stable security definer as $$
+create or replace function current_fpo() returns uuid language sql stable security definer as $$
   select fpo_id from operators where user_id = auth.uid()
 $$;
 
+drop policy if exists fpo_farmers on farmers;
 create policy fpo_farmers on farmers for select using (fpo_id = current_fpo());
+drop policy if exists fpo_requests on sale_requests;
 create policy fpo_requests on sale_requests for select using (fpo_id = current_fpo());
+drop policy if exists fpo_pools_r on pools;
 create policy fpo_pools_r on pools for select using (fpo_id = current_fpo());
+drop policy if exists fpo_members on pool_members;
 create policy fpo_members on pool_members for select
   using (exists (select 1 from pools p where p.id = pool_id and p.fpo_id = current_fpo()));
 
@@ -172,18 +176,23 @@ create policy fpo_members on pool_members for select
 alter table mandis enable row level security;
 alter table prices enable row level security;
 alter table crops enable row level security;
+drop policy if exists read_mandis on mandis;
 create policy read_mandis on mandis for select using (auth.uid() is not null);
+drop policy if exists read_prices on prices;
 create policy read_prices on prices for select using (auth.uid() is not null);
+drop policy if exists read_crops on crops;
 create policy read_crops on crops for select using (auth.uid() is not null);
 
 -- ---------- seed: crops ----------
 insert into crops values
   ('ragi',   'Ragi',   'ರಾಗಿ',     true,  0,    0.005),
   ('tur',    'Tur',    'ತೊಗರಿ',    true,  0,    0.005),
-  ('tomato', 'Tomato', 'ಟೊಮೇಟೊ', false, 0.03, 0);
+  ('tomato', 'Tomato', 'ಟೊಮೇಟೊ', false, 0.03, 0)
+on conflict (id) do nothing;
 
 insert into crop_aliases values
   ('Ragi (Finger Millet)', 'ragi'),
   ('Arhar (Tur/Red Gram)(Whole)', 'tur'),
-  ('Tomato', 'tomato');
+  ('Tomato', 'tomato')
+on conflict (alias) do nothing;
 -- Verify alias spellings against live data.gov.in rows before relying on them.
