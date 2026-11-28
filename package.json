@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check": "npm run lint && npm run typecheck && npm run test",
-    "db:types": "npx supabase gen types typescript --linked > lib/supabase/types.ts",
+    "db:types": "npx -y supabase gen types typescript --linked > lib/supabase/types.ts",
     "ingest": "tsx scripts/ingest-prices.ts",
     "forecasts": "tsx scripts/compute-forecasts.ts",
     "backtest": "tsx scripts/backtest.ts"
