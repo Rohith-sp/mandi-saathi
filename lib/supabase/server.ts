@@ -28,7 +28,7 @@ export async function createServerClient(): Promise<SupabaseClient> {
         setAll(cookiesToSet: { name: string; value: string; options?: object }[]) {
           try {
             for (const { name, value, options } of cookiesToSet) {
-              cookieStore.set(name, value, options as any)
+              cookieStore.set(name, value, options as Record<string, unknown>)
             }
           } catch {
             // In Server Components you can't set cookies; this is a no-op.

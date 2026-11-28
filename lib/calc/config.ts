@@ -40,6 +40,9 @@ export const CALC_CONFIG = {
   // Price staleness.
   PRICE_STALE_DAYS: 7, // mandis with older prices are excluded
   PRICE_OLD_DAYS: 2, // older than this -> spoken caveat
+
+  // Input validation bound (CALC_SPEC §3: q <= 500).
+  MAX_QUANTITY_QTLS: 500,
 } as const
 
 export type CalcConfig = typeof CALC_CONFIG

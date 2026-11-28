@@ -12,11 +12,18 @@ const poolResponseSchema = z.object({
 
 export const runtime = "nodejs"
 
+interface PoolMemberJoin {
+  id: string
+  pool_id: string
+  sale_request_id: string
+  pools: { id: string; crop_id: string; pickup_date: string | null; pickup_place: string | null; vehicle_note: string | null; target_warehouse_id: string | null; warehouses?: { name?: string } | null } | null
+  sale_requests: { id: string; crop_id: string; quantity_qtl: number; farmers: { phone?: string } | null } | null
+}
+
 export async function POST(req: Request) {
   const secretHeader = req.headers.get("x-api-secret")
   const tokenParam = new URL(req.url).searchParams.get("token")
   const secret = (secretHeader ?? tokenParam ?? "") || null
-
   if (!checkBolnaSecret(secret, process.env.BOLNA_TOOL_SECRET)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 })
   }
@@ -29,76 +36,68 @@ export async function POST(req: Request) {
   }
 
   const { pool_member_id, answer } = body
-
   const supabase = createServiceClient()
 
   // Update pool_members.response
   const { error: updateError } = await supabase
     .from("pool_members")
-    .update({
-      response: answer,
-      responded_at: new Date().toISOString(),
-    })
+    .update({ response: answer, responded_at: new Date().toISOString() })
     .eq("id", pool_member_id)
+  if (updateError) return NextResponse.json({ error: "db_update_failed" }, { status: 500 })
 
-  if (updateError) {
-    return NextResponse.json({ error: "db_update_failed" }, { status: 500 })
-  }
+  // Fetch member + pool for SMS + status transition
+  const { data: memberRows } = await supabase
+    .from("pool_members")
+    .select(`
+      id, pool_id, sale_request_id,
+      pools (id, crop_id, pickup_date, pickup_place, vehicle_note, target_warehouse_id, warehouses (name)),
+      sale_requests (id, crop_id, quantity_qtl, farmers (phone))
+    `)
+    .eq("id", pool_member_id)
+    .limit(1)
 
-  // If yes, send confirmation SMS
-  if (answer === "yes") {
-    const { data: member } = await supabase
-      .from("pool_members")
-      .select(
-        `
-        id,
-        sale_request_id,
-        pools (
-          id, crop_id, pickup_date, pickup_place, vehicle_note,
-          target_warehouse_id, warehouses (name)
-        ),
-        sale_requests (
-          phone_missing_placeholder,
-          farmers (phone),
-          crop_id, quantity_qtl
-        )
-      `
-      )
-      .eq("id", pool_member_id)
-      .single()
+  const member = (memberRows?.[0] ?? null) as PoolMemberJoin | null
+  const poolId = member?.pool_id
 
-    if (member) {
-      const pool = member.pools as any
-      const request = member.sale_requests as any
-      const farmer = request.farmers as any
-
-      if (farmer?.phone) {
-        await sendSms({
-          to: farmer.phone,
-          body: poolConfirmSmsTemplate({
-            to: farmer.phone,
-            crop: "",
-            pickupDate: pool.pickup_date ?? "",
-            pickupPlace: pool.pickup_place ?? "",
-            vehicleNote: pool.vehicle_note,
-            warehouseNote: pool.target_warehouse_id
-              ? `Warehouse: ${pool.warehouses?.name ?? ""}`
-              : undefined,
-          }).body,
-          kind: "pool_confirm",
-          farmerId: member.sale_request_id,
-          supabase,
-        }).catch(() => {} // SMS failure never fails
-        )
-      }
+  // If yes, send confirmation SMS (SMS failure never fails)
+  if (answer === "yes" && member) {
+    const pool = member.pools
+    const phone = member.sale_requests?.farmers?.phone
+    if (pool && phone) {
+      await sendSms({
+        to: phone,
+        body: poolConfirmSmsTemplate({
+          to: phone,
+          crop: pool.crop_id ?? "",
+          pickupDate: pool.pickup_date ?? "",
+          pickupPlace: pool.pickup_place ?? "",
+          vehicleNote: pool.vehicle_note ?? undefined,
+          warehouseNote: pool.target_warehouse_id ? `Warehouse: ${pool.warehouses?.name ?? ""}` : undefined,
+        }).body,
+        kind: "pool_confirm",
+        farmerId: member.sale_request_id,
+        supabase,
+      }).catch(() => {}) // SMS failure never fails
     }
   }
 
-  // Check if all members have responded
-  const { data: members } = await supabase
-    .from("pool_members")
-    .select("response")
-    .eq("pool_id", pool_member_id.split("_")[0]) // approximate; will be fixed by caller
+  // When no members are pending, set pool status = confirmed (≥1 yes) or cancelled
+  if (poolId) {
+    const { data: allMembers } = await supabase
+      .from("pool_members")
+      .select("response")
+      .eq("pool_id", poolId)
+
+    const responses = (allMembers ?? []).map((m: { response: string }) => m.response)
+    const noPending = responses.every((r) => r !== "pending")
+    if (noPending) {
+      const anyYes = responses.includes("yes")
+      await supabase
+        .from("pools")
+        .update({ status: anyYes ? "confirmed" : "cancelled" })
+        .eq("id", poolId)
+    }
+  }
 
   return NextResponse.json({ ok: true })
 }

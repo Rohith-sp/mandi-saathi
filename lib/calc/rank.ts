@@ -65,8 +65,12 @@ export function rankOptions(inputs: {
     spoken.push(local)
   }
 
+  // CALC_SPEC §5: pool_available = sell_far_pooled OR pooled store_loan.
+  // A store_loan that doesn't require pooling (requiresPool=false) isn't pooled.
   const poolAvailable = spoken.some(
-    (o) => o.id === "sell_far_pooled" || o.id === "store_loan"
+    (o) =>
+      o.id === "sell_far_pooled" ||
+      (o.id === "store_loan" && (o as StoreLoanOutput).requiresPool)
   )
 
   return { all, spoken, poolAvailable, debtNote: null }

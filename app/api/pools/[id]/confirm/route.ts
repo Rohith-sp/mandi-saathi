@@ -39,7 +39,7 @@ export async function POST(
 
   const { data: pool, error: poolError } = await supabase
     .from("pools")
-    .select("*, fpo_id, pool_members (*, sale_requests (farmers (phone)))")
+    .select("*, fpo_id, pool_members (id, sale_requests (quantity_qtl, farmers (phone)))")
     .eq("id", params.id)
     .eq("fpo_id", operator.fpo_id)
     .single()
@@ -85,18 +85,18 @@ export async function POST(
 
   if (poolAgentId && pool.pool_members) {
     for (const member of pool.pool_members) {
-      const request = member.sale_requests as any
-      const farmer = request?.farmers as any
+      const request = member.sale_requests as { quantity_qtl?: number; farmers?: { phone?: string } | null } | null
+      const farmerPhone = request?.farmers?.phone
 
-      if (farmer?.phone) {
+      if (farmerPhone) {
         const result = await bolnaOutboundCall({
           agentId: poolAgentId,
-          recipientPhoneNumber: farmer.phone,
+          recipientPhoneNumber: farmerPhone,
           userData: {
             pool_member_id: member.id,
             pool_id: pool.id,
             crop_id: pool.crop_id,
-            quantity_qtl: request.quantity_qtl,
+            quantity_qtl: request?.quantity_qtl,
             pickup_date,
             pickup_place,
             vehicle_note,

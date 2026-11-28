@@ -97,7 +97,7 @@ export default async function PoolDetailPage({
             {members.map((m) => (
               <div key={m.id} className="flex items-center justify-between py-1 text-sm border-b border-gray-100 last:border-0">
                 <span className="text-slate-900">
-                  Request {(m.sale_requests as any)?.[0]?.id?.slice(0, 8) ?? "—"}
+                  Request {m.sale_requests?.[0]?.id?.slice(0, 8) ?? "—"}
                 </span>
                 <span className={`text-xs font-medium ${
                   m.response === "yes"
