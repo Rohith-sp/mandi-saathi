@@ -23,7 +23,8 @@ returns table (
   commission_pct numeric,
   distance_km double precision
 )
-language sql stable as $$
+language sql stable
+set search_path = public, extensions as $$
   with latest as (
     select
       m.id as mandi_id,
@@ -34,9 +35,9 @@ language sql stable as $$
       p.modal_price as modal_price,
       m.commission_pct as commission_pct,
       -- straight-line km * 1.3 road factor
-      (st_distance(
-        m.location::geography,
-        st_makepoint(p_lng, p_lat)::geography
+      (extensions.st_distance(
+        m.location::extensions.geography,
+        extensions.st_makepoint(p_lng, p_lat)::extensions.geography
       ) / 1000.0) * 1.3 as distance_km,
       -- whole days between arrival date and today in Asia/Kolkata
       (
@@ -45,7 +46,7 @@ language sql stable as $$
     from mandis m
     join prices p on p.mandi_id = m.id and p.crop_id = p_crop_id
     where p.price_date >= ( (now() at time zone 'Asia/Kolkata')::date - p_stale_days )
-    order by p.price_date desc, st_distance(m.location::geography, st_makepoint(p_lng, p_lat)::geography) asc
+    order by p.price_date desc, extensions.st_distance(m.location::extensions.geography, extensions.st_makepoint(p_lng, p_lat)::extensions.geography) asc
   )
   select
     mandi_id, mandi_name, district, crop_id, price_date,
