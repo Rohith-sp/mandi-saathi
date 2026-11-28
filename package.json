@@ -12,9 +12,9 @@
     "test": "vitest run",
     "check": "npm run lint && npm run typecheck && npm run test",
     "db:types": "npx -y supabase gen types typescript --remote > lib/supabase/types.ts",
-    "ingest": "tsx scripts/ingest-prices.ts",
-    "forecasts": "tsx scripts/compute-forecasts.ts",
-    "backtest": "tsx scripts/backtest.ts"
+    "ingest": "node --env-file-if-exists=.env.local --import tsx scripts/ingest-prices.ts",
+    "forecasts": "node --env-file-if-exists=.env.local --import tsx scripts/compute-forecasts.ts",
+    "backtest": "node --env-file-if-exists=.env.local --import tsx scripts/backtest.ts"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.4.1",

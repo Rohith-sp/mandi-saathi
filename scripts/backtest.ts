@@ -1,6 +1,4 @@
-import "server-only"
-
-import { createServiceClient } from "../lib/supabase/server"
+import { createServiceClient } from "../lib/supabase/service"
 import { MS_PER_DAY } from "../lib/calc/time"
 
 /**

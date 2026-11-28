@@ -1,7 +1,4 @@
-import "server-only"
-
-import { createServiceClient } from "../lib/supabase/server"
-import { maskPhone } from "../lib/data/mask"
+import { createServiceClient } from "../lib/supabase/service"
 
 /**
  * Daily mandi price ingestion from data.gov.in.

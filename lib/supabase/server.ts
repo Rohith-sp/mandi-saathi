@@ -1,8 +1,9 @@
 import "server-only"
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js"
+import { type SupabaseClient } from "@supabase/supabase-js"
 import { createServerClient as createSsrServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+export { createServiceClient } from "./service"
 
 /**
  * Supabase clients.
@@ -36,12 +37,5 @@ export async function createServerClient(): Promise<SupabaseClient> {
         },
       },
     }
-  )
-}
-
-export function createServiceClient(): SupabaseClient {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 }

@@ -1,6 +1,4 @@
-import "server-only"
-
-import { createServiceClient } from "../lib/supabase/server"
+import { createServiceClient } from "../lib/supabase/service"
 import fs from "node:fs"
 import path from "node:path"
 
