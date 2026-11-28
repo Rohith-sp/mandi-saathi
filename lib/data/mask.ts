@@ -1,3 +1,5 @@
+import "server-only"
+
 /**
  * Privacy helpers: mask phone numbers and debt amounts for logging.
  * Never log full phone numbers or debt amounts in plain text.

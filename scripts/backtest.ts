@@ -1,6 +1,7 @@
 import "server-only"
 
 import { createServiceClient } from "../lib/supabase/server"
+import { MS_PER_DAY } from "../lib/calc/time"
 
 /**
  * Backtest forecast coverage.
@@ -32,7 +33,7 @@ function getISOWeek(d: Date): number {
   return (
     1 +
     Math.round(
-      ((tmp.getTime() - week1.getTime()) / 86400000 -
+      ((tmp.getTime() - week1.getTime()) / MS_PER_DAY -
         (week1.getDay() + 6) % 7 +
         3) /
         7

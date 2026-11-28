@@ -83,7 +83,7 @@ export default async function RequestsPage() {
               requests.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium text-slate-900">
-                    {maskPhone("+919999999999")}
+                    {maskPhone(r.farmer_phone ?? "")}
                   </TableCell>
                   <TableCell>{r.village_name}</TableCell>
                   <TableCell className="text-center text-sm">

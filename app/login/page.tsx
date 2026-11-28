@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { createBrowserClient } from "@/lib/supabase/browser"
 import { useRouter } from "next/navigation"
-import { maskPhone } from "@/lib/data/mask"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")

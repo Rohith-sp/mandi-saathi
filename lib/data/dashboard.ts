@@ -1,6 +1,7 @@
 import "server-only"
 
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { MS_PER_DAY } from "../calc/time"
 
 /**
  * Data access for the FPO dashboard. Uses Supabase service client (server-side).
@@ -19,6 +20,7 @@ export interface DashboardRequest {
   status: string
   pool_interest: boolean | null
   created_at: string
+  farmer_phone: string | null
 }
 
 export interface DashboardPool {
@@ -68,7 +70,8 @@ export async function listRequests({
       `
       id, crop_id, quantity_qtl, debt_rupees, status, pool_interest, created_at,
       crops (id, name_en, name_kn),
-      villages (name)
+      villages (name),
+      farmers (phone)
     `
     )
     .eq("fpo_id", fpoId)
@@ -92,6 +95,7 @@ export async function listRequests({
     status: row.status,
     pool_interest: row.pool_interest,
     created_at: row.created_at,
+    farmer_phone: row.farmers?.phone ?? null,
   }))
 }
 
@@ -205,7 +209,7 @@ export async function listLatestPrices({
 
   return Array.from(latest.values()).map((row: any) => {
     const priceDate = new Date(`${row.price_date}T12:00:00`)
-    const ageDays = Math.round((today.getTime() - priceDate.getTime()) / 86400000)
+    const ageDays = Math.round((today.getTime() - priceDate.getTime()) / MS_PER_DAY)
     return {
       mandi_name: row.mandis?.name ?? "",
       district: row.mandis?.district ?? "",
