@@ -1,8 +1,8 @@
-import { createServiceClient } from "@/lib/supabase/server"
+import { createServerClient } from "@/lib/supabase/server"
 import { listRequests } from "@/lib/data/dashboard"
 
 export default async function MapPage() {
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
   const requests = await listRequests({
     supabase,
     fpoId: "demo-fpo-id",

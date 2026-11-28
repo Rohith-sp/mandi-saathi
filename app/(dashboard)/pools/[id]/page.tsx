@@ -1,4 +1,4 @@
-import { createServiceClient } from "@/lib/supabase/server"
+import { createServerClient } from "@/lib/supabase/server"
 import { getPoolWithMembers } from "@/lib/data/dashboard"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,7 @@ export default async function PoolDetailPage({
 }: {
   params: { id: string }
 }) {
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
   const poolData = await getPoolWithMembers({
     supabase,
     poolId: params.id,

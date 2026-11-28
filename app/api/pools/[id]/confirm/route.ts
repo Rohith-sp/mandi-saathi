@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { createServiceClient } from "@/lib/supabase/server"
+import { createServerClient } from "@/lib/supabase/server"
 import { bolnaOutboundCall } from "@/lib/bolna/client"
 
 const confirmSchema = z.object({
@@ -15,7 +15,7 @@ export async function POST(
   req: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
 
   // Auth: operator session (via Supabase Auth cookie)
   const {

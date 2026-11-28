@@ -1,4 +1,4 @@
-import { createServiceClient } from "@/lib/supabase/server"
+import { createServerClient } from "@/lib/supabase/server"
 import { listLatestPrices } from "@/lib/data/dashboard"
 import {
   Table,
@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table"
 
 export default async function PricesPage() {
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
   const prices = await listLatestPrices({ supabase })
 
   return (

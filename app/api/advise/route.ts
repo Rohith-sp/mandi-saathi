@@ -57,8 +57,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ status: "needs_clarification", field: "village" })
   }
 
-  const lat = resolved.location?.lat ?? 0
-  const lng = resolved.location?.lng ?? 0
+  // C2: do not invent coordinates; a village without location can't compute distances
+  if (!resolved.location) {
+    return NextResponse.json({ status: "needs_clarification", field: "village_location" })
+  }
+  const lat = resolved.location.lat
+  const lng = resolved.location.lng
 
   // 5. Load mandi prices (non-stale, within 80 km)
   const mandiPrices = await loadMandiPrices({

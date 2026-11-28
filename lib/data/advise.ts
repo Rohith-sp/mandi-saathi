@@ -120,56 +120,25 @@ export async function loadMandiPrices({
   maxDistanceKm?: number
   staleDays?: number
 }): Promise<MandiPriceRow[]> {
-  try {
-    const { data, error } = await supabase.rpc("mandi_prices_near", {
-      p_crop_id: cropId,
-      p_lat: lat,
-      p_lng: lng,
-      p_max_km: maxDistanceKm,
-      p_stale_days: staleDays,
-    })
-    if (error) throw error
-    return (data ?? []).map((row: any) => ({
-      mandi_id: row.mandi_id,
-      mandi_name: row.mandi_name,
-      district: row.district,
-      crop_id: row.crop_id,
-      price_date: row.price_date,
-      modal_price: Number(row.modal_price),
-      price_age_days: Number(row.price_age_days),
-      commission_pct: row.commission_pct ?? null,
-      distance_km: Number(row.distance_km),
-    }))
-  } catch {
-    // Fallback: simple query without PostGIS if rpc not available
-    const { data, error } = await supabase
-      .from("prices")
-      .select(
-        `
-        price_date,
-        modal_price,
-        mandis (id, name, district, commission_pct),
-        crops (id)
-      `
-      )
-      .eq("crop_id", cropId)
-      .gte(
-        "price_date",
-        new Date(Date.now() - staleDays * 86400000).toISOString().slice(0, 10)
-      )
-    if (error) throw error
-    return (data ?? []).map((row: any) => ({
-      mandi_id: row.mandis.id,
-      mandi_name: row.mandis.name,
-      district: row.mandis.district,
-      crop_id: row.crops.id,
-      price_date: row.price_date,
-      modal_price: Number(row.modal_price),
-      price_age_days: 0,
-      commission_pct: row.mandis.commission_pct ?? null,
-      distance_km: 0,
-    }))
-  }
+  const { data, error } = await supabase.rpc("mandi_prices_near", {
+    p_crop_id: cropId,
+    p_lat: lat,
+    p_lng: lng,
+    p_max_km: maxDistanceKm,
+    p_stale_days: staleDays,
+  })
+  if (error) throw error
+  return (data ?? []).map((row: MandiPriceRow) => ({
+    mandi_id: row.mandi_id,
+    mandi_name: row.mandi_name,
+    district: row.district,
+    crop_id: row.crop_id,
+    price_date: row.price_date,
+    modal_price: Number(row.modal_price),
+    price_age_days: Number(row.price_age_days),
+    commission_pct: row.commission_pct ?? null,
+    distance_km: Number(row.distance_km),
+  }))
 }
 
 /**

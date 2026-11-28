@@ -1,6 +1,6 @@
 import "server-only"
 
-import { createServiceClient } from "../supabase/server"
+import type { SupabaseClient } from "@supabase/supabase-js"
 
 /**
  * Data access for the FPO dashboard. Uses Supabase service client (server-side).
@@ -56,7 +56,7 @@ export async function listRequests({
   week,
   status,
 }: {
-  supabase: ReturnType<typeof createServiceClient>
+  supabase: SupabaseClient
   fpoId: string
   crop?: string
   week?: string
@@ -106,7 +106,7 @@ export async function listPools({
   supabase,
   fpoId,
 }: {
-  supabase: ReturnType<typeof createServiceClient>
+  supabase: SupabaseClient
   fpoId: string
 }): Promise<DashboardPool[]> {
   const { data, error } = await supabase
@@ -145,7 +145,7 @@ export async function getPoolWithMembers({
   poolId,
   fpoId,
 }: {
-  supabase: ReturnType<typeof createServiceClient>
+  supabase: SupabaseClient
   poolId: string
   fpoId: string
 }) {
@@ -177,7 +177,7 @@ export async function getPoolWithMembers({
 export async function listLatestPrices({
   supabase,
 }: {
-  supabase: ReturnType<typeof createServiceClient>
+  supabase: SupabaseClient
 }): Promise<DashboardPrice[]> {
   const { data, error } = await supabase
     .from("prices")

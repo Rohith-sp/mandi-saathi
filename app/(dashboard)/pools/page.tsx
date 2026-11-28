@@ -1,4 +1,4 @@
-import { createServiceClient } from "@/lib/supabase/server"
+import { createServerClient } from "@/lib/supabase/server"
 import { listPools } from "@/lib/data/dashboard"
 import { Button } from "@/components/ui/button"
 import {
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table"
 
 export default async function PoolsPage() {
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
   const pools = await listPools({
     supabase,
     fpoId: "demo-fpo-id",

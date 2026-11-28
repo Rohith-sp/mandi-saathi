@@ -1,4 +1,4 @@
-import { createServiceClient } from "@/lib/supabase/server"
+import { createServerClient } from "@/lib/supabase/server"
 import { listRequests } from "@/lib/data/dashboard"
 import { maskPhone } from "@/lib/data/mask"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select"
 
 export default async function RequestsPage() {
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
   const [searchParams] = await Promise.resolve<[URLSearchParams]>([
     new URLSearchParams(),
   ])
