@@ -171,6 +171,32 @@ Automated reviewer against AGENTS.md + `.abide/rubric.json`. `npm run check` gre
 
 ---
 
+## Runtime fixes during setup (2026-11-28)
+
+Local bring-up surfaced real bugs; all fixed and committed:
+
+- `/` rendered a stub heading only → redirects to `/login` or `/requests`.
+- Login form redirected before the magic link was clicked → "check your email" state.
+- Supabase built-in mailer caps at ~2 emails/hour (429) → added password sign-in.
+- Next 16 deprecated `middleware.ts` → renamed to `proxy.ts` (session refresh).
+- `0001` seeded `crop_aliases` with spellings that do not exist in data.gov.in
+  (`Ragi (Finger Millet)` vs `Ragi(Finger Millet)`,
+  `Arhar (Tur/Red Gram)(Whole)` vs `Red gram/Arhar/Tur(whole)`). Migration
+  `0003` adds the live names (applied to the project).
+- `scripts/seed.ts` upserted villages/warehouses on columns with no unique
+  index → `0003` adds those indexes; `point()` now emits EWKT instead of GeoJSON.
+- Added `npm run seed` (`scripts/seed-reference.ts`) reading a user-supplied
+  `supabase/seed/reference.json` (template: `reference.example.json`).
+- Ingestion now reports unmapped commodities and an empty `mandis` table
+  instead of silently inserting zero rows.
+
+Still required from the user: real mandi/village coordinates (`npm run seed`),
+and `INGEST_DISTRICTS` set to districts that actually have data (Kolar and
+Chikkaballapur returned 0 rows on 2026-11-28; Mandya, Belagavi,
+Chamarajanagar, Bengaluru South, Raichur, etc. had rows).
+
+---
+
 ## How to use this file
 
 - Before starting a task: check it is the first unchecked item in its phase (per CLAUDE.md workflow).

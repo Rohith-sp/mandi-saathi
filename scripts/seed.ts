@@ -44,11 +44,10 @@ export interface SeedFPO {
   district: string
 }
 
-function point(lat: number, lng: number): object {
-  return {
-    type: "Point",
-    coordinates: [lng, lat], // GeoJSON: [longitude, latitude]
-  }
+function point(lat: number, lng: number): string {
+  // PostgREST casts text input with the type's input function; geography
+  // accepts EWKT. (A GeoJSON object is not accepted on insert.)
+  return `SRID=4326;POINT(${lng} ${lat})`
 }
 
 export async function seedReferenceData({

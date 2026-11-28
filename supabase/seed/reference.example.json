@@ -1,0 +1,15 @@
+{
+  "_comment": [
+    "Copy this file to supabase/seed/reference.json and fill in REAL data.",
+    "Coordinates must come from OpenStreetMap or Google Maps. Do not invent them.",
+    "mandis[].name must equal data.gov.in 'market' and district must equal 'district'.",
+    "Empty name/district fails validation on purpose, so running this as-is inserts nothing."
+  ],
+  "fpo": {
+    "name": "",
+    "district": ""
+  },
+  "villages": [],
+  "mandis": [],
+  "warehouses": []
+}

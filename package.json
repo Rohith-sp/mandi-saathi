@@ -14,7 +14,8 @@
     "db:types": "npx -y supabase gen types typescript --remote > lib/supabase/types.ts",
     "ingest": "node --env-file-if-exists=.env.local --import tsx scripts/ingest-prices.ts",
     "forecasts": "node --env-file-if-exists=.env.local --import tsx scripts/compute-forecasts.ts",
-    "backtest": "node --env-file-if-exists=.env.local --import tsx scripts/backtest.ts"
+    "backtest": "node --env-file-if-exists=.env.local --import tsx scripts/backtest.ts",
+    "seed": "node --env-file-if-exists=.env.local --import tsx scripts/seed-reference.ts"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.4.1",

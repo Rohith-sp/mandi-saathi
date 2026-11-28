@@ -58,10 +58,16 @@ export async function ingestPrices({
   districts: string[]
   supabase: ReturnType<typeof createServiceClient>
   log?: (msg: string) => void
-}): Promise<{ inserted: number; skipped: number; unknownMarkets: string[] }> {
+}): Promise<{
+  inserted: number
+  skipped: number
+  unknownMarkets: string[]
+  unknownCommodities: string[]
+}> {
   let inserted = 0
   let skipped = 0
   const unknownMarkets: string[] = []
+  const unknownCommodities: string[] = []
 
   // Build commodity → crop mapping from DB (crop_aliases)
   const { data: aliases, error: aliasError } = await supabase
@@ -84,6 +90,12 @@ export async function ingestPrices({
       id: m.id,
       district: m.district,
     })
+  }
+  if (mandiMap.size === 0) {
+    log(
+      "No mandis in the database. Prices are matched to mandis by name+district, " +
+        "so every row will be skipped. Seed mandis first (npm run seed)."
+    )
   }
 
   for (const district of districts) {
@@ -115,7 +127,15 @@ export async function ingestPrices({
 
       for (const row of rows) {
         const cropId = aliasMap.get(row.commodity.toLowerCase())
-        if (!cropId) continue // commodity not in our demo set
+        if (!cropId) {
+          // Commodity not mapped in crop_aliases; data.gov.in spellings differ
+          // (e.g. "Ragi(Finger Millet)"), so report them instead of dropping silently.
+          if (!unknownCommodities.includes(row.commodity)) {
+            unknownCommodities.push(row.commodity)
+            log(`Unmapped commodity (not in crop_aliases): ${row.commodity}`)
+          }
+          continue
+        }
 
         const mandiKey = `${row.market.toLowerCase()}|${district.toLowerCase()}`
         const mandi = mandiMap.get(mandiKey)
@@ -175,8 +195,11 @@ export async function ingestPrices({
     }
   }
 
-  log(`Ingestion complete: inserted=${inserted} skipped=${skipped} unknownMarkets=${unknownMarkets.length}`)
-  return { inserted, skipped, unknownMarkets }
+  log(
+    `Ingestion complete: inserted=${inserted} skipped=${skipped} ` +
+      `unknownMarkets=${unknownMarkets.length} unmappedCommodities=${unknownCommodities.length}`
+  )
+  return { inserted, skipped, unknownMarkets, unknownCommodities }
 }
 
 if (require.main === module) {
