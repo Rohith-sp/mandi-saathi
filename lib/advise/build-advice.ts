@@ -7,7 +7,7 @@ import type {
   StoreLoanOutput,
 } from "../calc/options"
 import { rankOptions, debtNote, type RankedOutput, type DebtNote } from "../calc/rank"
-import { kolkataDate, kolkataISOWeek } from "../calc/time"
+import { kolkataISOWeek, kolkataSaleWeek } from "../calc/time"
 import type { MandiPriceRow, ForecastRow, OpenRequest } from "../data/advise"
 
 /**
@@ -44,12 +44,7 @@ export function buildAdvice(inputs: AdviceInputs): AdviceResult {
   const commissionLocal = localMandi.commission_pct ?? CALC_CONFIG.COMMISSION_PCT
 
   // sale week = Monday of target week in Asia/Kolkata
-  const todayKolkata = kolkataDate(today)
-  const d = new Date(`${todayKolkata}T00:00:00`)
-  // Compute Monday of current ISO week in Kolkata
-  const day = (d.getDay() + 6) % 7
-  d.setDate(d.getDate() - day)
-  const saleWeek = kolkataDate(d)
+  const saleWeek = kolkataSaleWeek(today)
   const isoWeek = kolkataISOWeek(today)
 
   // poolQty: this request's qtl + sum of other open requests, capped at truck capacity
@@ -61,13 +56,16 @@ export function buildAdvice(inputs: AdviceInputs): AdviceResult {
   const assumedPoolQty = poolQtyRaw < poolMinFill ? poolMinFill : poolQty
 
   // sell_local
-  const local: SellLocalOutput = sellLocal({
-    qtl,
-    mandi: localMandi.mandi_name,
-    priceRsPerQtl: localMandi.modal_price,
-    priceAgeDays: localMandi.price_age_days,
-    commissionPct: commissionLocal,
-  })
+  const local: SellLocalOutput = {
+    ...sellLocal({
+      qtl,
+      mandi: localMandi.mandi_name,
+      priceRsPerQtl: localMandi.modal_price,
+      priceAgeDays: localMandi.price_age_days,
+      commissionPct: commissionLocal,
+    }),
+    priceDate: localMandi.price_date,
+  }
 
   // sell_far_alone + sell_far_pooled: pick far mandi with highest pooled net
   let farMandi: MandiPriceRow | undefined
@@ -76,26 +74,32 @@ export function buildAdvice(inputs: AdviceInputs): AdviceResult {
 
   for (const far of farCandidates) {
     const commissionFar = far.commission_pct ?? CALC_CONFIG.COMMISSION_PCT
-    const alone = sellFarAlone({
-      qtl,
-      mandi: far.mandi_name,
-      priceRsPerQtl: far.modal_price,
-      priceAgeDays: far.price_age_days,
-      distanceKm: far.distance_km,
-      transitLossPct: cropInfo.transitLossPct,
-      commissionPct: commissionFar,
-    })
-    const pooled = sellFarPooled({
-      qtl,
-      mandi: far.mandi_name,
-      priceRsPerQtl: far.modal_price,
-      priceAgeDays: far.price_age_days,
-      distanceKm: far.distance_km,
-      transitLossPct: cropInfo.transitLossPct,
-      poolQty: assumedPoolQty,
-      poolBasis,
-      commissionPct: commissionFar,
-    })
+    const alone: SellFarAloneOutput = {
+      ...sellFarAlone({
+        qtl,
+        mandi: far.mandi_name,
+        priceRsPerQtl: far.modal_price,
+        priceAgeDays: far.price_age_days,
+        distanceKm: far.distance_km,
+        transitLossPct: cropInfo.transitLossPct,
+        commissionPct: commissionFar,
+      }),
+      priceDate: far.price_date,
+    }
+    const pooled: SellFarPooledOutput = {
+      ...sellFarPooled({
+        qtl,
+        mandi: far.mandi_name,
+        priceRsPerQtl: far.modal_price,
+        priceAgeDays: far.price_age_days,
+        distanceKm: far.distance_km,
+        transitLossPct: cropInfo.transitLossPct,
+        poolQty: assumedPoolQty,
+        poolBasis,
+        commissionPct: commissionFar,
+      }),
+      priceDate: far.price_date,
+    }
 
     if (!farMandi || pooled.netRs > (farPooled?.netRs ?? -Infinity)) {
       farMandi = far

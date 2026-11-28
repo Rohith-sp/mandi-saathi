@@ -1,19 +1,23 @@
 import { createServerClient } from "@/lib/supabase/server"
-import { getPoolWithMembers } from "@/lib/data/dashboard"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { getOperatorFpoId, getPoolWithMembers } from "@/lib/data/dashboard"
+import { maskPhone } from "@/lib/data/mask"
+import { ConfirmPoolForm } from "./confirm-form"
 
 export default async function PoolDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
   const supabase = await createServerClient()
-  const poolData = await getPoolWithMembers({
-    supabase,
-    poolId: params.id,
-    fpoId: "demo-fpo-id",
-  })
+  const fpoId = await getOperatorFpoId(supabase)
+  const poolData = fpoId
+    ? await getPoolWithMembers({
+        supabase,
+        poolId: id,
+        fpoId,
+      })
+    : null
 
   if (!poolData) {
     return (
@@ -36,13 +40,6 @@ export default async function PoolDetailPage({
             {pool.type === "truck" ? "Shared truck pool" : "Warehouse pool"}
           </p>
         </div>
-        <div className="flex gap-2">
-          {pool.status === "proposed" && (
-            <button className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
-              Confirm Pool
-            </button>
-          )}
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -63,9 +60,7 @@ export default async function PoolDetailPage({
             </div>
             <div className="flex justify-between">
               <dt className="text-gray-500">Target mandi</dt>
-              <dd className="font-medium">
-                {pool.target_mandi_name || "—"}
-              </dd>
+              <dd className="font-medium">{pool.target_mandi_name || "—"}</dd>
             </div>
           </dl>
         </div>
@@ -95,18 +90,29 @@ export default async function PoolDetailPage({
           </p>
           <div className="space-y-1">
             {members.map((m) => (
-              <div key={m.id} className="flex items-center justify-between py-1 text-sm border-b border-gray-100 last:border-0">
+              <div
+                key={m.id}
+                className="flex items-center justify-between py-1 text-sm border-b border-gray-100 last:border-0"
+              >
                 <span className="text-slate-900">
-                  Request {m.sale_requests?.[0]?.id?.slice(0, 8) ?? "—"}
+                  {maskPhone(m.farmer_phone)} ({m.quantity_qtl} qtl)
                 </span>
-                <span className={`text-xs font-medium ${
-                  m.response === "yes"
-                    ? "text-green-600"
-                    : m.response === "no"
-                      ? "text-red-600"
-                      : "text-gray-500"
-                }`}>
-                  {m.response === "pending" ? "Pending" : m.response === "yes" ? "Yes" : "No"}
+                <span
+                  className={`text-xs font-medium ${
+                    m.response === "yes"
+                      ? "text-green-600"
+                      : m.response === "no"
+                        ? "text-red-600"
+                        : "text-gray-500"
+                  }`}
+                >
+                  {m.response === "pending"
+                    ? "Pending"
+                    : m.response === "yes"
+                      ? "Yes"
+                      : m.response === "no"
+                        ? "No"
+                        : "No answer"}
                 </span>
               </div>
             ))}
@@ -117,31 +123,7 @@ export default async function PoolDetailPage({
       {pool.status === "proposed" && (
         <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <h2 className="text-sm font-semibold text-slate-900 mb-4">Confirm Pool</h2>
-          <form className="space-y-4 max-w-md">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="col-span-2 md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Pickup date
-                </label>
-                <Input type="date" />
-              </div>
-              <div className="col-span-2 md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Pickup place
-                </label>
-                <Input placeholder="e.g. Mulbagal bus stand" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Vehicle note
-              </label>
-              <Input placeholder="e.g. Tata 407, KA-07-XXXX" />
-            </div>
-            <Button type="submit" className="w-full">
-              Confirm pool and notify members
-            </Button>
-          </form>
+          <ConfirmPoolForm poolId={pool.id} />
         </div>
       )}
     </div>

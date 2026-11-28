@@ -17,6 +17,7 @@ import { CROPS } from "../calc/config"
 
 export interface PoolingRequest {
   id: string
+  fpoId?: string | null
   cropId: string
   quantityQtls: number
   lat: number
@@ -44,11 +45,13 @@ export interface PoolingWarehouse {
 
 export interface ProposedPool {
   type: "truck" | "warehouse"
+  fpoId: string | null
+  cropId: string
+  saleWeek: string
   memberIds: string[]
   totalQtls: number
   targetMandiId?: string
   targetWarehouseId?: string
-  estimatedGainPerFarmer?: number
 }
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -93,8 +96,9 @@ export function groupPools(inputs: GroupingInputs): {
   }
 
   for (const [groupKey, group] of byGroup) {
-    const [cropId] = groupKey.split("|")
+    const [cropId, saleWeek] = groupKey.split("|")
     const cropInfo = CROPS[cropId]
+    if (!cropInfo) continue
 
     // Sort by quantity desc
     const sorted = [...group].sort((a, b) => b.quantityQtls - a.quantityQtls)
@@ -132,10 +136,12 @@ export function groupPools(inputs: GroupingInputs): {
         const targetMandi = selectTruckTarget(mandis, seed.lat, seed.lng)
         pools.push({
           type: "truck",
+          fpoId: seed.fpoId ?? null,
+          cropId,
+          saleWeek,
           memberIds,
           totalQtls,
           targetMandiId: targetMandi?.id,
-          estimatedGainPerFarmer: totalQtls > 0 ? 500 : undefined, // placeholder; replaced by caller
         })
         // Only mark assigned when a pool is created
         for (const id of memberIds) assigned.add(id)
@@ -144,6 +150,9 @@ export function groupPools(inputs: GroupingInputs): {
         const targetWarehouse = selectWarehouseTarget(warehouses, seed.lat, seed.lng)
         pools.push({
           type: "warehouse",
+          fpoId: seed.fpoId ?? null,
+          cropId,
+          saleWeek,
           memberIds,
           totalQtls,
           targetWarehouseId: targetWarehouse?.id,

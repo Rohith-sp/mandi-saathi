@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { createServerClient } from "@/lib/supabase/server"
+import { createServerClient, createServiceClient } from "@/lib/supabase/server"
 import { bolnaOutboundCall } from "@/lib/bolna/client"
 
 const confirmSchema = z.object({
@@ -15,8 +15,9 @@ const CALL_RATE_LIMIT_MS = 1000 // Bolna outbound rate limit: 1 call/second
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: poolId } = await params
   const supabase = await createServerClient()
 
   // Auth: operator session (via Supabase Auth cookie)
@@ -42,7 +43,7 @@ export async function POST(
   const { data: pool, error: poolError } = await supabase
     .from("pools")
     .select("*, fpo_id, pool_members (id, sale_requests (quantity_qtl, farmers (phone)))")
-    .eq("id", params.id)
+    .eq("id", poolId)
     .eq("fpo_id", operator.fpo_id)
     .single()
 
@@ -66,16 +67,17 @@ export async function POST(
 
   const { pickup_date, pickup_place, vehicle_note } = body
 
-  // Set pool to confirming
-  const { error: updateError } = await supabase
+  // Set pool to confirming via service client (pools has SELECT-only RLS; ownership verified above)
+  const service = createServiceClient()
+  const { error: updateError } = await service
     .from("pools")
     .update({
       status: "confirming",
       pickup_date,
       pickup_place,
-      vehicle_note,
+      vehicle_note: vehicle_note ?? null,
     })
-    .eq("id", params.id)
+    .eq("id", poolId)
 
   if (updateError) {
     return NextResponse.json({ error: "db_update_failed" }, { status: 500 })

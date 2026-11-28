@@ -1,6 +1,6 @@
+import Link from "next/link"
 import { createServerClient } from "@/lib/supabase/server"
-import { listPools } from "@/lib/data/dashboard"
-import { Button } from "@/components/ui/button"
+import { getOperatorFpoId, listPools } from "@/lib/data/dashboard"
 import {
   Table,
   TableBody,
@@ -12,10 +12,8 @@ import {
 
 export default async function PoolsPage() {
   const supabase = await createServerClient()
-  const pools = await listPools({
-    supabase,
-    fpoId: "demo-fpo-id",
-  })
+  const fpoId = await getOperatorFpoId(supabase)
+  const pools = fpoId ? await listPools({ supabase, fpoId }) : []
 
   return (
     <div className="space-y-6">
@@ -26,7 +24,6 @@ export default async function PoolsPage() {
             Proposed and confirmed shared truck / warehouse pools
           </p>
         </div>
-        <Button>Propose Pool</Button>
       </div>
 
       <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
@@ -52,14 +49,18 @@ export default async function PoolsPage() {
               pools.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium text-slate-900">
-                    Pool #{p.id.slice(0, 8)}
+                    <Link href={`/pools/${p.id}`} className="underline hover:text-slate-700">
+                      Pool #{p.id.slice(0, 8)}
+                    </Link>
                   </TableCell>
                   <TableCell className="text-center text-sm">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      p.type === "truck"
-                        ? "bg-blue-100 text-blue-800"
-                        : "bg-green-100 text-green-800"
-                    }`}>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        p.type === "truck"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
                       {p.type === "truck" ? "Truck" : "Warehouse"}
                     </span>
                   </TableCell>
@@ -70,15 +71,17 @@ export default async function PoolsPage() {
                     {p.member_count}
                   </TableCell>
                   <TableCell className="text-center text-sm">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      p.status === "proposed"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : p.status === "confirming"
-                          ? "bg-blue-100 text-blue-800"
-                          : p.status === "confirmed"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                    }`}>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        p.status === "proposed"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : p.status === "confirming"
+                            ? "bg-blue-100 text-blue-800"
+                            : p.status === "confirmed"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
                       {p.status}
                     </span>
                   </TableCell>

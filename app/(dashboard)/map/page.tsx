@@ -1,12 +1,10 @@
 import { createServerClient } from "@/lib/supabase/server"
-import { listRequests } from "@/lib/data/dashboard"
+import { getOperatorFpoId, listRequests } from "@/lib/data/dashboard"
 
 export default async function MapPage() {
   const supabase = await createServerClient()
-  const requests = await listRequests({
-    supabase,
-    fpoId: "demo-fpo-id",
-  })
+  const fpoId = await getOperatorFpoId(supabase)
+  const requests = fpoId ? await listRequests({ supabase, fpoId }) : []
 
   return (
     <div className="space-y-6">

@@ -59,10 +59,10 @@ export function poolConfirmSmsTemplate(inputs: {
   const detail = vehicleNote
     ? `ವಾಹನ: ${vehicleNote}`
     : warehouseNote
-      ? `ಗೋಧ� مایೂ: ${warehouseNote}`
+      ? `ಗೋದಾಮು: ${warehouseNote}`
       : ""
 
-  let body = `ಮಂಡಿ ಸಾಥಿ ಹಂಚಿಕೆ:${crop}\nದಿನಾಂಕ: ${pickupDate}\nಸ್ಥಳ: ${pickupPlace}\n${detail}\nಹೌದು/ಇಲ್ಲ ಎಂದು ಪ್ರತಿಸ juive.`
+  let body = `ಮಂಡಿ ಸಾಥಿ ಹಂಚಿಕೆ: ${crop}\nದಿನಾಂಕ: ${pickupDate}\nಸ್ಥಳ: ${pickupPlace}\n${detail}\nಹೌದು/ಇಲ್ಲ ಎಂದು ತಿಳಿಸಿ.`
 
   if (body.length > 210) {
     body = body.slice(0, 207) + "..."

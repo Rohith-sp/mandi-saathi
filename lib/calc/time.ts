@@ -38,3 +38,16 @@ export function kolkataISOWeek(today: Date): number {
     )
   )
 }
+
+/**
+ * Monday (YYYY-MM-DD) of the ISO week containing `today` in Asia/Kolkata.
+ * Uses pure UTC calendar arithmetic so server timezone never affects the result.
+ */
+export function kolkataSaleWeek(today: Date): string {
+  const localStr = kolkataDate(today)
+  const [y, m, d] = localStr.split("-").map(Number)
+  const utc = new Date(Date.UTC(y, m - 1, d))
+  const dayFromMonday = (utc.getUTCDay() + 6) % 7
+  utc.setUTCDate(utc.getUTCDate() - dayFromMonday)
+  return utc.toISOString().slice(0, 10)
+}

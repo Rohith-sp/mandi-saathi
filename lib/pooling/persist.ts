@@ -10,15 +10,20 @@ export interface PoolingInputs {
     totalQtls: number
     targetMandiId?: string
     targetWarehouseId?: string
-    fpoId: string
+    fpoId: string | null
     cropId: string
     saleWeek: string
   }>
 }
 
+interface ExistingPoolMemberRow {
+  pool_id: string
+  pools: { status: string } | { status: string }[] | null
+}
+
 /**
- * Persist proposed pools to the database. Idempotent: skips requests
- * already in a non-cancelled pool.
+ * Persist proposed pools to the database. Idempotent: skips pools where any
+ * member request is already in a non-cancelled pool.
  */
 export async function persistPools({
   supabase,
@@ -31,16 +36,21 @@ export async function persistPools({
   let skipped = 0
 
   for (const p of pools) {
-    // Check if any member is already in a non-cancelled pool
+    if (p.memberIds.length === 0) {
+      skipped++
+      continue
+    }
+
+    // Check if ANY member is already in a non-cancelled pool
     const { data: existingMembers } = await supabase
       .from("pool_members")
       .select("pool_id, pools (status)")
-      .eq("sale_request_id", p.memberIds[0])
+      .in("sale_request_id", p.memberIds)
 
-    const alreadyPooled = existingMembers?.some(
-      (m: any) =>
-        m.pools && m.pools.status !== "cancelled" && m.pools.status !== "confirmed"
-    )
+    const alreadyPooled = ((existingMembers ?? []) as ExistingPoolMemberRow[]).some((m) => {
+      const poolObj = Array.isArray(m.pools) ? m.pools[0] : m.pools
+      return poolObj && poolObj.status !== "cancelled"
+    })
 
     if (alreadyPooled) {
       skipped++
@@ -63,7 +73,7 @@ export async function persistPools({
       .select("id")
       .single()
 
-    if (poolError) {
+    if (poolError || !pool) {
       skipped++
       continue
     }

@@ -98,7 +98,10 @@ export async function computeForecasts({
     const dates = rows.map((r) => new Date(`${r.price_date}T12:00:00`))
     const minDate = dates.reduce((a, b) => (a < b ? a : b), dates[0])
     const maxDate = dates.reduce((a, b) => (a > b ? a : b), dates[0])
-    const yearsOfData = Math.max(1, Math.round((maxDate.getTime() - minDate.getTime()) / (365.25 * 86400000 * 1000)) / 100) // rough years
+    const yearsOfData = Math.max(
+      1,
+      Math.round((maxDate.getTime() - minDate.getTime()) / (365.25 * MS_PER_DAY))
+    )
 
     for (const [weekStr, weekRows] of byWeek) {
       const isoWeek = Number(weekStr)

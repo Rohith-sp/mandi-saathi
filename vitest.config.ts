@@ -3,7 +3,10 @@ import { resolve } from "node:path"
 
 export default defineConfig({
   resolve: {
-    alias: { "server-only": resolve(__dirname, "tests/server-only-stub.ts") },
+    alias: {
+      "@": resolve(__dirname, "."),
+      "server-only": resolve(__dirname, "tests/server-only-stub.ts"),
+    },
   },
   test: {
     globals: true,

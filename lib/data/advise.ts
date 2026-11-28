@@ -213,7 +213,7 @@ export async function loadOpenRequestsForPool({
       .eq("crop_id", cropId)
       .eq("sale_week", saleWeek)
       .eq("status", "open")
-      .is("pool_interest", true)
+      .or("pool_interest.is.null,pool_interest.eq.true")
     if (error) return []
     return (data ?? []).map((row: any) => ({
       id: row.id,
