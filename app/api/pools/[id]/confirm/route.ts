@@ -11,6 +11,8 @@ const confirmSchema = z.object({
 
 export const runtime = "nodejs"
 
+const CALL_RATE_LIMIT_MS = 1000 // Bolna outbound rate limit: 1 call/second
+
 export async function POST(
   req: Request,
   { params }: { params: { id: string } }
@@ -108,7 +110,7 @@ export async function POST(
         }
 
         // Rate-limit: 1 call/second
-        await new Promise((r) => setTimeout(r, 1000))
+        await new Promise((r) => setTimeout(r, CALL_RATE_LIMIT_MS))
       }
     }
   }

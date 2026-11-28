@@ -106,6 +106,7 @@ describe("Case A — ragi, 15 qtl (golden)", () => {
     r50: 0.06,
     r90: 0.12,
     yearsOfData: 3,
+    storageLossPctPerMonth: 0.005,
   })
 
   it("sell_local net = 28,900, say = 28,900, high", () => {
@@ -309,6 +310,7 @@ describe("ranking edge cases", () => {
       r50: 0.1,
       r90: 0.15,
       yearsOfData: 3,
+    storageLossPctPerMonth: 0.005,
     })
 
     const ranked = rankOptions({ local, farAlone, farPooled, storeLoan: store })

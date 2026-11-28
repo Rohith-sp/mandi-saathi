@@ -63,7 +63,7 @@ export interface StoreLoanInput {
   yearsOfData: number
   commissionPct?: number
   /** Fractional storage loss per month for this crop (from crop table). */
-  storageLossPctPerMonth?: number
+  storageLossPctPerMonth: number
 }
 
 // ---------------------------------------------------------------------------
@@ -259,7 +259,7 @@ export function storeLoan(input: StoreLoanInput): StoreLoanOutput {
     r90,
     yearsOfData,
     commissionPct = CALC_CONFIG.COMMISSION_PCT,
-    storageLossPctPerMonth = 0.005,
+    storageLossPctPerMonth,
   } = input
 
   const V = qtl * priceRsPerQtl

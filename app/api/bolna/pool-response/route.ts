@@ -17,7 +17,7 @@ interface PoolMemberJoin {
   pool_id: string
   sale_request_id: string
   pools: { id: string; crop_id: string; pickup_date: string | null; pickup_place: string | null; vehicle_note: string | null; target_warehouse_id: string | null; warehouses?: { name?: string } | null } | null
-  sale_requests: { id: string; crop_id: string; quantity_qtl: number; farmers: { phone?: string } | null } | null
+  sale_requests: { id: string; crop_id: string; quantity_qtl: number; farmers: { id?: string; phone?: string } | null } | null
 }
 
 export async function POST(req: Request) {
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     .select(`
       id, pool_id, sale_request_id,
       pools (id, crop_id, pickup_date, pickup_place, vehicle_note, target_warehouse_id, warehouses (name)),
-      sale_requests (id, crop_id, quantity_qtl, farmers (phone))
+      sale_requests (id, crop_id, quantity_qtl, farmers (id, phone))
     `)
     .eq("id", pool_member_id)
     .limit(1)
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
           warehouseNote: pool.target_warehouse_id ? `Warehouse: ${pool.warehouses?.name ?? ""}` : undefined,
         }).body,
         kind: "pool_confirm",
-        farmerId: member.sale_request_id,
+        farmerId: member.sale_requests?.farmers?.id,
         supabase,
       }).catch(() => {}) // SMS failure never fails
     }
